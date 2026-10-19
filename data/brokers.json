@@ -1,0 +1,10 @@
+{
+  "blis-global": {
+    "name": "Blis Global Ltd",
+    "method": "web-form",
+    "route": "https://www.blis.com/opt-out",
+    "status": "live",
+    "requires": ["email"],
+    "notes": "Form found at /opt-out path; requires email submission."
+  }
+}
