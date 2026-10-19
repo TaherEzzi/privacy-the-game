@@ -1,0 +1,10 @@
+{
+  "datonics": {
+    "name": "Datonics LLC",
+    "url": "https://www.datoniq.com/opt-out",
+    "method": "web-form",
+    "status": "active",
+    "requires": "email",
+    "notes": "Redirects from datonics.com to datoniq.com. Opt-out form requires email address."
+  }
+}
