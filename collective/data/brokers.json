@@ -1,12 +1,11 @@
 {
-  "datalink-services": {
-    "name": "Datalink Services, Inc",
-    "optOut": {
-      "method": "web-form",
-      "url": "https://www.transunion.com/consumer-opt-out",
-      "status": "verified",
-      "lastChecked": "2023-10-25",
-      "requirements": ["name", "addresses", "dob", "ssn", "email (optional)"]
-    }
+  "a-direct-marketing": {
+    "name": "A Direct Marketing Inc",
+    "method": "web-form",
+    "route": "https://www.bookyourdata.com/opt-out",
+    "status": "active",
+    "lastChecked": "2023-10-25",
+    "requirements": ["email", "name", "address", "phone"],
+    "notes": "Form requires email, full name, current address, and phone number. No ID or payment needed."
   }
 }
