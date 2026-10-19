@@ -1,0 +1,12 @@
+{
+  "datalink-services": {
+    "name": "Datalink Services, Inc",
+    "optOut": {
+      "method": "web-form",
+      "url": "https://www.transunion.com/consumer-opt-out",
+      "status": "verified",
+      "lastChecked": "2023-10-25",
+      "requirements": ["name", "addresses", "dob", "ssn", "email (optional)"]
+    }
+  }
+}
