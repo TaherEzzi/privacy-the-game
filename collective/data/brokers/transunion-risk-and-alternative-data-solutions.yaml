@@ -1,0 +1,7 @@
+name: TransUnion Risk and Alternative Data Solutions, Inc.
+domain: www.transunion.com
+methods:
+  - web-form
+url: https://privacyportal.transunion.com/us/do-not-sell-my-personal-information/
+status: accessible
+notes: Redirects from original URL; form requires email/phone verification.
