@@ -69,16 +69,16 @@ class PgHarness:
     def insert_session(self, country="US", region="US-IL", city="Chicago", website=WEBSITE):
         sid = str(uuid.uuid4())
         self.sql("INSERT INTO session (session_id, website_id, country, region, city) "
-                 f"VALUES ('{sid}', '{website}', {q(country)}, {q(region)}, {q(city)});")
+                 f"VALUES ('{sid}', '{website}', {self._quote(country)}, {self._quote(region)}, {self._quote(city)});")
         return sid
 
     def insert_event(self, session_id, name, data=None, website=WEBSITE, at="now()"):
         eid = str(uuid.uuid4())
         stmts = [f"INSERT INTO website_event (event_id, website_id, session_id, event_name, created_at) "
-                 f"VALUES ('{eid}', '{website}', '{session_id}', {q(name)}, {at});"]
+                 f"VALUES ('{eid}', '{website}', '{session_id}', {self._quote(name)}, {at});"]
         for k, v in (data or {}).items():
             stmts.append("INSERT INTO event_data (event_data_id, website_id, website_event_id, data_key, string_value) "
-                         f"VALUES ('{uuid.uuid4()}', '{website}', '{eid}', {q(k)}, {q(v)});")
+                         f"VALUES ('{uuid.uuid4()}', '{website}', '{eid}', {self._quote(k)}, {self._quote(v)});")
         self.sql("\n".join(stmts))
         return eid
 
@@ -87,6 +87,11 @@ class PgHarness:
         if table == "event_data":
             return int(self.sql(f"SELECT count(*) FROM event_data d JOIN website_event e ON e.event_id = d.website_event_id WHERE e.session_id = '{session_id}';").strip())
         return int(self.sql(f"SELECT count(*) FROM {table} WHERE {col} = '{session_id}';").strip())
+
+    def _quote(self, v):
+        if v is None:
+            return "NULL"
+        return "'" + str(v).replace("'", "''") + "'"
 
 
 def q(v):
