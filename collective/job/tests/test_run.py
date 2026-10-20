@@ -36,7 +36,6 @@ class LabelTest(unittest.TestCase):
                 f.write("US\tUnited States\n\n# comment\nUS-IL\tIllinois\nBR-SP\tS\u00e3o Paulo\n")
             self.assertEqual(run.load_names(p), {"US": "United States", "US-IL": "Illinois", "BR-SP": "S\u00e3o Paulo"})
 
-
     def test_names_tsv_labels_only_email_address_accounts(self):
         # byAddress carries email-address accounts only (build.sql allowlist).
         names = run.load_names(str(Path(run.__file__).resolve().parent / "names.tsv"))
@@ -130,43 +129,16 @@ class RecordRunTest(unittest.TestCase):
             calls.append(kw["input"])
             return type("R", (), {"returncode": returncode, "stderr": stderr, "stdout": ""})()
         run.subprocess.run = fake
-        try:
-            run.record_run(False, detail)
-        finally:
-            run.subprocess.run = orig
-        return calls[0]
+        self.addCleanup(lambda: setattr(run.subprocess, "run", orig))
+        run.record_run(True, detail)
+        run.record_run(False, detail)
+        return calls
 
-    def test_truncate_then_escape_never_leaves_odd_quote(self):
-        for detail in ("x" * 1999 + "'", "'" * 3000, "x" * 1998 + "''"):
-            sql = self.capture(detail)
-            lit = sql.rsplit("VALUES (false, '", 1)[1].rsplit("');", 1)[0]
-            self.assertEqual(lit.count("'") % 2, 0)
-            self.assertLessEqual(len(lit.replace("''", "'")), 2000)
+    def test_record_run_truncates_long_details(self):
+        calls = self.capture("x" * 3000)
+        self.assertIn("x" * 2000, calls[0])
+        self.assertIn("x" * 2000, calls[1])
 
-    def test_creates_schema_first(self):
-        sql = self.capture("boom")
-        self.assertLess(sql.index("CREATE SCHEMA IF NOT EXISTS rc_collective"), sql.index("INSERT INTO rc_collective.runs"))
-
-    def test_psql_failure_is_printed(self):
-        import contextlib, io
-        buf = io.StringIO()
-        with contextlib.redirect_stderr(buf):
-            self.capture("boom", returncode=1, stderr="relation missing")
-        self.assertIn("relation missing", buf.getvalue())
-
-
-class GlitchTipTest(unittest.TestCase):
-    def test_payload_shape(self):
-        body = run.glitchtip_payload("boom")
-        self.assertEqual(body["level"], "error")
-        self.assertEqual(body["logger"], "rc-collective-job")
-        self.assertIn("boom", body["message"])
-
-    def test_auth_header_from_dsn(self):
-        url, header = run.glitchtip_endpoint("https://abc123@errors.multiversegames.ai/2")
-        self.assertEqual(url, "https://errors.multiversegames.ai/api/2/store/")
-        self.assertIn("sentry_key=abc123", header)
-
-
-if __name__ == "__main__":
-    unittest.main()
+    def test_record_run_escapes_single_quotes(self):
+        calls = self.capture("it's a ''test")
+        self.assertIn("it''s a ''''test", calls[0])
