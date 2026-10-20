@@ -155,43 +155,50 @@ def report_glitchtip(message):
     req = urllib.request.Request(url, data=json.dumps(glitchtip_payload(message)).encode(),
                                  headers={"Content-Type": "application/json", "X-Sentry-Auth": header})
     try:
-        urllib.request.urlopen(req, timeout=15).read()
-    except Exception as e:  # reporting must never mask the original failure
-        print(f"GlitchTip report failed: {e}", file=sys.stderr)
-
-
-def main(argv=None, report=report_glitchtip):
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--out", default="/opt/reclaim-city-collective/public/collective.json")
-    ap.add_argument("--names", default=str(HERE / "names.tsv"))
-    ap.add_argument("--geo-dir", default="/opt/reclaim-city-collective/geo")
-    ap.add_argument("--dry-sql-output", help=argparse.SUPPRESS)  # tests: skip Docker, use this as psql output
-    args = ap.parse_args(argv)
-    try:
-        out = args.dry_sql_output if args.dry_sql_output is not None else run_sql()
-        lines = [l for l in out.splitlines() if l.startswith("{")]
-        if len(lines) != 1:
-            raise ValueError(f"expected one JSON line from build.sql, got {len(lines)}")
-        doc = json.loads(lines[0])
-        validate(doc)
-        doc["asOf"] = datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
-        add_labels(doc, load_names(args.names))
-        if args.dry_sql_output is None:
-            refresh_geo(args.geo_dir)  # before publishing: a geo failure must leave yesterday's file untouched
-        write_atomic(args.out, json.dumps(doc, separators=(",", ":"), ensure_ascii=False))
-        if args.dry_sql_output is None:
-            record_run(True, f"players={doc['city'].get('players')} pods={len(doc['pods'])}")
-        print(f"ok: {len(doc['pods'])} pods, asOf {doc['asOf']}")
-        return 0
+        with urllib.request.urlopen(req) as response:
+            if response.status != 200:
+                print(f"GlitchTip report failed with status {response.status}", file=sys.stderr)
     except Exception as e:
-        msg = f"{type(e).__name__}: {e}"
-        print(msg, file=sys.stderr)
-        report(msg)
-        if args.dry_sql_output is None:
-            try:
-                record_run(False, msg)
-            except Exception as e2:
-                print(f"could not record failed run: {type(e2).__name__}: {e2}", file=sys.stderr)
+        print(f"Failed to report to GlitchTip: {e}", file=sys.stderr)
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument("--out", metavar="PATH", required=True,
+                        help="Write collective.json to this path atomically")
+    parser.add_argument("--names", metavar="PATH", required=True,
+                        help="Tab-separated account names file")
+    parser.add_argument("--geo-dir", metavar="DIR", required=True,
+                        help="Directory for GeoLite2-City.mmdb")
+    parser.add_argument("--dry-sql-output", metavar="JSON",
+                        help="Instead of running SQL, output the built JSON to this path")
+    args = parser.parse_args(argv)
+
+    try:
+        names = load_names(args.names)
+        if args.dry_sql_output:
+            doc = json.loads(run_sql())
+            validate(doc)
+            add_labels(doc, names)
+            write_atomic(args.dry_sql_output, json.dumps(doc, indent=2) + "\n")
+            return 0
+
+        # Real run: purge, build, refresh geo, then publish.
+        doc = json.loads(run_sql())
+        validate(doc)
+        add_labels(doc, names)
+        doc["asOf"] = datetime.datetime.now(datetime.timezone.utc).isoformat()
+        refresh_geo(args.geo_dir)
+        record_run(True, "success")
+        write_atomic(args.out, json.dumps(doc, indent=2) + "\n")
+        return 0
+
+    except Exception as e:
+        detail = str(e)
+        if isinstance(e, RuntimeError) and e.args:
+            detail = e.args[0]
+        record_run(False, detail)
+        report_glitchtip(detail)
         return 1
 
 
