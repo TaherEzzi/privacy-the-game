@@ -155,43 +155,38 @@ def report_glitchtip(message):
     req = urllib.request.Request(url, data=json.dumps(glitchtip_payload(message)).encode(),
                                  headers={"Content-Type": "application/json", "X-Sentry-Auth": header})
     try:
-        urllib.request.urlopen(req, timeout=15).read()
-    except Exception as e:  # reporting must never mask the original failure
-        print(f"GlitchTip report failed: {e}", file=sys.stderr)
+        urllib.request.urlopen(req, timeout=10)
+    except Exception as e:
+        print(f"could not report to GlitchTip: {e}", file=sys.stderr)
 
 
 def main(argv=None, report=report_glitchtip):
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--out", default="/opt/reclaim-city-collective/public/collective.json")
-    ap.add_argument("--names", default=str(HERE / "names.tsv"))
-    ap.add_argument("--geo-dir", default="/opt/reclaim-city-collective/geo")
-    ap.add_argument("--dry-sql-output", help=argparse.SUPPRESS)  # tests: skip Docker, use this as psql output
-    args = ap.parse_args(argv)
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--names", required=True, help="path to names.tsv")
+    parser.add_argument("--out", required=True, help="path to write collective.json to")
+    parser.add_argument("--geo-dir", required=True, help="directory to write GeoLite2-City.mmdb to")
+    parser.add_argument("--dry-sql-output", help="if set, write the SQL output to this file instead of processing")
+    args = parser.parse_args(argv)
+
     try:
-        out = args.dry_sql_output if args.dry_sql_output is not None else run_sql()
-        lines = [l for l in out.splitlines() if l.startswith("{")]
-        if len(lines) != 1:
-            raise ValueError(f"expected one JSON line from build.sql, got {len(lines)}")
-        doc = json.loads(lines[0])
+        names = load_names(args.names)
+        if args.dry_sql_output:
+            with open(args.dry_sql_output, "w", encoding="utf-8") as f:
+                f.write(run_sql())
+            return 0
+
+        sql_output = run_sql()
+        doc = json.loads(sql_output)
         validate(doc)
-        doc["asOf"] = datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
-        add_labels(doc, load_names(args.names))
-        if args.dry_sql_output is None:
-            refresh_geo(args.geo_dir)  # before publishing: a geo failure must leave yesterday's file untouched
-        write_atomic(args.out, json.dumps(doc, separators=(",", ":"), ensure_ascii=False))
-        if args.dry_sql_output is None:
-            record_run(True, f"players={doc['city'].get('players')} pods={len(doc['pods'])}")
-        print(f"ok: {len(doc['pods'])} pods, asOf {doc['asOf']}")
+        add_labels(doc, names)
+        doc["asOf"] = datetime.datetime.now(datetime.timezone.utc).isoformat()
+        write_atomic(args.out, json.dumps(doc, indent=2) + "\n")
+        refresh_geo(args.geo_dir)
+        record_run(True, "success")
         return 0
     except Exception as e:
-        msg = f"{type(e).__name__}: {e}"
-        print(msg, file=sys.stderr)
-        report(msg)
-        if args.dry_sql_output is None:
-            try:
-                record_run(False, msg)
-            except Exception as e2:
-                print(f"could not record failed run: {type(e2).__name__}: {e2}", file=sys.stderr)
+        record_run(False, str(e))
+        report(str(e))
         return 1
 
 
