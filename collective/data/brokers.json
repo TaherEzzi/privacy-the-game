@@ -1,8 +1,8 @@
 {
   "date-detective": {
     "name": "Date Detective Inc",
-    "method": "web-form",
-    "url": "https://datedetective.com/contact-us/",
-    "notes": "Updated URL to the contact form on datedetective.com, which, according to their privacy policy, can be used for opt-out requests. The previously listed opt-out form on date-detective.app was unavailable."
+    "method": "email",
+    "url": "support@datedetective.com",
+    "notes": "Opt-out requests accepted via email at support@datedetective.com."
   }
 }
