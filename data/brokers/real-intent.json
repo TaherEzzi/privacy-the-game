@@ -1,0 +1,12 @@
+{
+  "id": "real-intent",
+  "name": "REAL INTENT INC",
+  "method": "web-form",
+  "optOutUrl": "https://www.realintent.co/privacy-policy",
+  "status": "verified",
+  "lastChecked": "2025-07-17",
+  "notes": "Privacy policy page is live and contains opt-out/data deletion instructions. Bot protection causes automated checks to receive blocked responses (401/403/429). Manual browser access confirms the page loads correctly. The privacy policy directs users to contact them via email to request data removal. No separate dedicated opt-out form exists; the privacy policy page itself describes the opt-out process.",
+  "finalUrl": "https://www.realintent.co/privacy-policy",
+  "verdict": "real opt-out form",
+  "requirements": ["email"]
+}
