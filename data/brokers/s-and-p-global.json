@@ -1,0 +1,12 @@
+{
+  "id": "s-and-p-global",
+  "name": "S&P Global Inc",
+  "method": "web-form",
+  "url": "https://www.spglobal.com/en/privacy/privacy-policy",
+  "status": "verified",
+  "lastChecked": "2025-07-15",
+  "notes": "The homepage (spglobal.com/en) is not an opt-out form. The privacy policy page links to a 'Your Rights' section with instructions for data subject requests. S&P Global uses a OneTrust-powered privacy request form. The form requires: full name, email address, country of residence, and description of request. No ID upload or payment required. Final URL after navigation: https://www.spglobal.com/en/privacy/privacy-policy",
+  "optOutUrl": "https://www.spglobal.com/en/privacy/privacy-policy",
+  "requirements": ["name", "email", "country"],
+  "verdict": "real opt-out form via privacy policy page"
+}
